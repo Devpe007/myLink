@@ -1,21 +1,58 @@
 import React, { useState } from 'react';
-import { TouchableWithoutFeedback, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
+import { TouchableWithoutFeedback, Keyboard, KeyboardAvoidingView, Platform, Modal, ActivityIndicator } from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
 
 import StatusBarPage from '../../components/StatusBarPage';
 import Menu from '../../components/Menu';
+import ModalLink from '../../components/ModalLink';
+
+import api from '../../services/api';
+
+import { saveLink } from '../../utils/storeLinks';
 
 import { Feather } from '@expo/vector-icons';
 
 import { ContainerLogo, Logo, ContainerContent, Title, SubTitle, ContainerInput, BoxIcon, Input, ButtonLink, ButtonLinkText } from './styles';
 
 export default function Home() {
-    const [input, setIput] = useState('');
 
-    function handleShortLink() {
-        alert('URL DIGITADA: '+ input);
-    }
+    const [loading, setLoading] = useState(false);
+    const [input, setIput] = useState('');
+    const [modalVisible, setModalVisible] = useState(false);
+    const [data, setData] = useState({});
+
+    async function handleShortLink() {
+        setLoading(true);
+
+        try {
+            const response = await api.post('/shorten',
+            {
+                long_url: input,
+            });
+
+            setData(response.data);
+
+            setModalVisible(true);
+
+            saveLink('sujeitolinks', response.data);
+
+            Keyboard.dismiss();
+
+            setLoading(false);
+
+            setIput('');
+
+        } catch {
+            alert('Ops, parece que algo deu errado!');
+            
+            Keyboard.dismiss();
+
+            setIput('');
+
+            setLoading(false);
+        };
+    };
     
     return(
         <TouchableWithoutFeedback onPress={ () => Keyboard.dismiss() }>
@@ -70,17 +107,29 @@ export default function Home() {
                         </ContainerInput>
 
                         <ButtonLink onPress={ handleShortLink } >
-
-                            <ButtonLinkText>Gerar Link</ButtonLinkText>
+                            {
+                                loading ? (
+                                    <ActivityIndicator color="#121212" size={24} />
+                                ) : (
+                                    <ButtonLinkText>Gerar Link</ButtonLinkText>     
+                                )
+                            }
 
                         </ButtonLink>
 
                     </ContainerContent>
 
                 </KeyboardAvoidingView>
+
+                <Modal visible={modalVisible} transparent animationType="slide">
+
+                    <ModalLink onClose={ () => setModalVisible(false) } data={data} />
+
+                </Modal>
             
             </LinearGradient>
 
         </TouchableWithoutFeedback>
     );
+    
 };
